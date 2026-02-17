@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<meta name='viewport' content='width=device-width,initial-scale=1' />
+<title>TRB | Secure Asset Management</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --accent: #2563eb;
+    --text-dark: #0f172a;
+    --text-light: #64748b;
+    --locked-bg: #fff7ed;
+    --locked-text: #c2410c;
+    --chart-line: #3b82f6;
+  }
+
+  body {
+    margin: 0; background: var(--bg); color: var(--text-dark);
+    font-family: 'Inter', sans-serif; min-height: 100vh;
+  }
+
+  .top-nav {
+    width: 100%; padding: 24px 0; text-align: center;
+    background: white; border-bottom: 1px solid #e2e8f0; margin-bottom: 40px;
+  }
+  .logo { font-weight: 800; font-size: 22px; letter-spacing: -0.5px; color: var(--text-dark); }
+  .logo span { color: var(--accent); }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 20px 60px; }
+  
+  .verify-status { 
+    display: inline-flex; align-items: center; gap: 6px; 
+    background: #f1f5f9; color: #475569; padding: 6px 14px; 
+    border-radius: 6px; font-size: 11px; font-weight: 700; margin-bottom: 20px;
+    border: 1px solid #e2e8f0;
+  }
+
+  h1 { font-size: 32px; font-weight: 800; margin: 0 0 30px 0; letter-spacing: -1px; }
+
+  .info-box {
+    background: white; border: 1px solid #e2e8f0; padding: 28px;
+    border-radius: 12px; margin-bottom: 30px; line-height: 1.6; color: var(--text-light); font-size: 14px;
+  }
+  .info-box h2 { font-size: 15px; margin-top: 0; color: var(--text-dark); text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
+  
+  .card {
+    background: var(--card); padding: 0; border-radius: 12px;
+    border: 1px solid #e2e8f0; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  
+  .card-body { padding: 24px; }
+  .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  
+  .asset-info .sym { font-weight: 800; font-size: 14px; color: var(--text-dark); }
+  .lock-pill { 
+    background: var(--locked-bg); color: var(--locked-text); 
+    font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 4px; border: 1px solid #ffedd5;
+  }
+
+  .value { font-size: 32px; font-weight: 700; color: var(--text-dark); margin: 0; }
+  .usd { font-size: 14px; color: var(--text-light); margin-top: 4px; }
+
+  /* Professional Area Chart */
+  .chart-wrapper {
+    width: 100%; height: 80px; position: relative;
+    margin-top: auto; border-top: 1px solid #f1f5f9;
+    background: #fafafa;
+  }
+  .sparkline-svg { width: 100%; height: 100%; display: block; }
+  .sparkline-path { stroke: var(--chart-line); stroke-width: 2; fill: none; stroke-linecap: round; }
+  .sparkline-fill { fill: url(#gradient); opacity: 0.1; }
+
+  .total-wrap {
+    margin-top: 40px; background: var(--text-dark); color: white;
+    padding: 40px; border-radius: 16px; text-align: center;
+  }
+  .total-label { font-size: 13px; opacity: 0.5; margin-bottom: 10px; font-weight: 600; text-transform: uppercase; }
+  #total { font-size: 42px; font-weight: 800; letter-spacing: -1px; }
+
+  /* Auth UI */
+  #lock-screen {
+    position: fixed; inset: 0; background: #0f172a; z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .auth-card { background: white; padding: 40px; border-radius: 16px; width: 340px; text-align: center; }
+  input { width: 100%; padding: 14px; margin: 20px 0 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 16px; text-align: center; box-sizing: border-box; }
+  button { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
+  #pw-error { color: #ef4444; font-size: 13px; margin-top: 12px; display: none; }
+
+  #dashboard { display: none; }
+</style>
+</head>
+<body>
+
+  <div id='lock-screen'>
+    <div class='auth-card'>
+      <div class="logo" style="margin-bottom:10px">TRB <span>GLOBAL</span></div>
+      <input id='pw-input' type='password' placeholder='Access Code' />
+      <button onclick='checkPassword()'>Verify Session</button>
+      <div id='pw-error'>Incorrect password</div>
+    </div>
+  </div>
+
+  <div id='dashboard'>
+    <div class="top-nav">
+      <div class="logo">TRB <span>GLOBAL</span></div>
+    </div>
+
+    <div class="container">
+      <div class="verify-status">SECURE SERVER ID: TRB-DAS-0041</div>
+      <h1>Account Dashboard</h1>
+
+      <div class='info-box'>
+        <h2>TRB Information</h2>
+        <p>The TRB system is a concept frequently discussed online describing a next-generation
+          digital ledger framework that emphasizes transparency, security, and efficiency.
+          It is an official government-recognized financial platform.</p>
+        <p>Some asset balances may appear as <strong>locked</strong> when network confirmations or verification
+          steps are incomplete. Locked balances cannot be accessed until verification is fully
+          processed. Real cryptocurrency wallets always require third-party deposits to release
+          legitimately owned funds.</p>
+      </div>
+
+      <div class='grid' id='cards'></div>
+
+      <div class="total-wrap">
+        <div class="total-label">Combined Net Value</div>
+        <div id='total'>—</div>
+        <p style="font-size:11px; opacity:0.4; margin-top:20px; font-weight: 600;">ENCRYPTED LEDGER ACCESS</p>
+      </div>
+    </div>
+  </div>
+
+  <svg style="width:0; height:0; position:absolute;">
+    <defs>
+      <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" style="stop-color:var(--chart-line); stop-opacity:1" />
+        <stop offset="100%" style="stop-color:var(--chart-line); stop-opacity:0" />
+      </linearGradient>
+    </defs>
+  </svg>
+
+<script>
+const accounts = {
+  "57294": { btc: 2.05211, eth: 18.4427, doge: 102317 },
+  "11541": { btc: 3.093296, eth: 29.73091, doge: 303274 },
+  "62676": { btc: 5.159677, eth: 48.840246, doge: 793674 },
+  "60961": { btc: 0.980197, eth: 6.986937, doge: 147443 },
+  "86155": { btc: 10.066645, eth: 81.54148, doge: 1266253 },
+  "33051": { btc: 0.39358, eth: 3.30437, doge: 131359 },
+};
+
+function formatUsd(n){ return "$" + Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+async function checkPassword(){
+  const input = document.getElementById("pw-input").value.trim();
+  if(accounts[input]){
+    document.getElementById("lock-screen").style.display = "none";
+    document.getElementById("dashboard").style.display = "block";
+    showWallet(accounts[input]);
+    return;
+  }
+  document.getElementById("pw-error").style.display = "block";
+}
+
+function showWallet(w){
+  const grid = document.getElementById("cards");
+  grid.innerHTML = "";
+  const prices = { bitcoin:52410, ethereum:3120, dogecoin:0.14 };
+  const assets = [
+    { sym: "BTC", name: "Bitcoin", amt: w.btc, usd: w.btc * prices.bitcoin, points: "0,50 40,30 80,45 120,20 160,35 200,10 240,25 280,15 320,20" },
+    { sym: "ETH", name: "Ethereum", amt: w.eth, usd: w.eth * prices.ethereum, points: "0,40 40,45 80,20 120,35 160,10 200,40 240,15 280,30 320,25" },
+    { sym: "DOGE", name: "Dogecoin", amt: w.doge, usd: w.doge * prices.dogecoin, points: "0,20 40,25 80,15 120,40 160,45 200,20 240,35 280,10 320,30" }
+  ];
+
+  let total = 0;
+  assets.forEach(asset => {
+    total += asset.usd;
+    const card = document.createElement("div");
+    card.className = "card";
+    // Construct polyline and polygon for area effect
+    const polyline = asset.points;
+    const polygon = `${polyline} 320,80 0,80`;
+    
+    card.innerHTML = `
+      <div class="card-body">
+        <div class="card-header">
+          <div class="asset-info"><span class="sym">${asset.sym}</span> <span style="font-size:12px; color:var(--text-light)">/ ${asset.name}</span></div>
+          <div class="lock-pill">🔒 LOCKED</div>
+        </div>
+        <div class="value">${asset.amt.toLocaleString()}</div>
+        <div class="usd">Market Value: ${formatUsd(asset.usd)}</div>
+      </div>
+      <div class="chart-wrapper">
+        <svg class="sparkline-svg" preserveAspectRatio="none" viewBox="0 0 320 80">
+          <polygon class="sparkline-fill" points="${polygon}" />
+          <polyline class="sparkline-path" points="${polyline}" />
+        </svg>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  // Adding S&P 500
+  const spx = document.createElement("div");
+  spx.className = "card";
+  spx.innerHTML = `
+    <div class="card-body">
+      <div class="card-header"><div class="asset-info"><span class="sym">SPX500</span> <span style="font-size:12px; color:var(--text-light)">/ S&P 500 Index</span></div><div class="lock-pill">🔒 LOCKED</div></div>
+      <div class="value">0.00</div><div class="usd">Market Value: $0.00</div>
+    </div>
+    <div class="chart-wrapper"><svg class="sparkline-svg" preserveAspectRatio="none" viewBox="0 0 320 80"><line x1="0" y1="40" x2="320" y2="40" stroke="#e2e8f0" stroke-width="2" stroke-dasharray="4"/></svg></div>
+  `;
+  grid.appendChild(spx);
+
+  document.getElementById("total").textContent = formatUsd(total);
+}
+</script>
+</body>
+</html>
