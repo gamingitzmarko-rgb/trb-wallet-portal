@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Admin — TRB Global Terminal</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap">
+<style>
+  :root {
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --accent: #2563eb;
+    --text-dark: #0f172a;
+    --text-light: #64748b;
+    --border: #e2e8f0;
+  }
+
+  html, body { height: 100%; margin: 0; background: var(--bg); font-family: 'Inter', sans-serif; color: var(--text-dark); display: flex; align-items: center; justify-content: center; }
+
+  .wrap { max-width: 500px; width: 100%; padding: 20px; box-sizing: border-box; }
+  
+  .logo { font-weight: 800; font-size: 20px; text-align: center; margin-bottom: 30px; letter-spacing: -0.5px; }
+  .logo span { color: var(--accent); }
+
+  h1 { font-size: 18px; font-weight: 700; margin: 0 0 10px; text-align: center; color: var(--text-dark); }
+  
+  .card { 
+    background: var(--card); padding: 32px; border-radius: 16px; 
+    border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); 
+  }
+
+  label { display: block; font-size: 12px; font-weight: 700; color: var(--text-light); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+  
+  input { 
+    width: 100%; padding: 14px; border-radius: 8px; border: 1px solid var(--border); 
+    background: #f1f5f9; color: var(--text-dark); font-size: 16px; outline: none; box-sizing: border-box; 
+    transition: border-color 0.2s;
+  }
+  input:focus { border-color: var(--accent); background: #fff; }
+
+  button { 
+    width: 100%; padding: 14px 16px; border-radius: 8px; border: none; cursor: pointer; 
+    background: var(--accent); color: white; font-size: 14px; font-weight: 700; 
+    transition: opacity 0.2s; margin-top: 10px;
+  }
+  button:hover { opacity: 0.9; }
+  button.secondary { background: #f1f5f9; color: var(--text-dark); border: 1px solid var(--border); margin-top: 0; width: auto; }
+
+  .row { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
+  .result-row { 
+    display: flex; align-items: center; justify-content: space-between; 
+    background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px dashed var(--border);
+  }
+
+  .muted { color: var(--text-light); font-size: 13px; line-height: 1.5; text-align: center; margin-bottom: 25px; }
+  
+  .codebox { 
+    font-family: 'ui-monospace', monospace; font-weight: 700; color: var(--accent); font-size: 18px; 
+  }
+
+  #status { font-size: 12px; margin-top: 20px; text-align: center; font-weight: 600; color: var(--text-light); }
+  
+  .divider { height: 1px; background: var(--border); margin: 20px 0; }
+</style>
+</head>
+<body>
+
+  <div class="wrap">
+    <div class="logo">TRB <span>GLOBAL</span></div>
+    <h1>Admin Generation Terminal</h1>
+    <p class="muted">
+      Enter the <strong>Total USD</strong> to generate a unique asset verification code for the player.
+    </p>
+
+    <div class="card">
+      <div>
+        <label>Target Portfolio Value (USD)</label>
+        <input id="total" type="number" step="any" placeholder="e.g. 50000" />
+      </div>
+
+      <button onclick="createCode()">Generate Secure Code</button>
+
+      <div id="out" style="display:none" class="row">
+        <div class="divider"></div>
+        <label>Generated Code</label>
+        <div class="result-row">
+          <span class="codebox" id="code">—</span>
+          <button class="secondary" onclick="copyCode()">Copy</button>
+        </div>
+
+        <div id="linkRow" style="display:none;">
+          <label>Pre-filled Access Link</label>
+          <div class="result-row">
+            <input id="link" type="text" readonly style="border:none; background:transparent; font-size:12px; padding:0;" />
+            <button class="secondary" onclick="copyLink()">Copy</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="status">System Ready</div>
+    </div>
+  </div>
+
+<script>
+function setStatus(s){ document.getElementById("status").textContent = s; }
+
+async function createCode(){
+  const raw = (document.getElementById("total").value || "").trim();
+  const cleaned = raw.replace(/,/g, "");
+  const total = Number(cleaned || 0);
+  
+  if(!(total > 0)){ 
+    setStatus("⚠️ Error: Value must be greater than 0"); 
+    return; 
+  }
+
+  try {
+    setStatus("Generating Secure Code...");
+    const r = await fetch("/.netlify/functions/create", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ total })
+    });
+
+    if(!r.ok){
+      setStatus("❌ Server Error. Please check Netlify Logs.");
+      return;
+    }
+
+    const j = await r.json();
+    
+    // Show Output
+    document.getElementById("out").style.display = "block";
+    document.getElementById("code").textContent = j.code;
+
+    // Generate link for the new professional dashboard
+    const base = location.origin + "/";
+    const link = base + "?code=" + encodeURIComponent(j.code);
+    document.getElementById("link").value = link;
+    document.getElementById("linkRow").style.display = "block";
+
+    setStatus("✅ Code created for " + new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(j.target_total_usd));
+  } catch(e){
+    setStatus("❌ Network Error. Verify connection.");
+  }
+}
+
+function copyCode(){
+  const c = document.getElementById("code").textContent.trim();
+  if(!c || c==="—") return;
+  navigator.clipboard.writeText(c);
+  setStatus("Code copied to clipboard.");
+}
+
+function copyLink(){
+  const link = document.getElementById("link").value.trim();
+  if(!link) return;
+  navigator.clipboard.writeText(link);
+  setStatus("Access link copied to clipboard.");
+}
+</script>
+</body>
+</html>
