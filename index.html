@@ -4,7 +4,7 @@
 <meta charset='utf-8' />
 <meta name='viewport' content='width=device-width,initial-scale=1' />
 <title>TRB | Secure Asset Management</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <style>
   :root {
     --bg: #f8fafc;
@@ -22,6 +22,7 @@
     font-family: 'Inter', sans-serif; min-height: 100vh;
   }
 
+  /* Header Branding */
   .top-nav {
     width: 100%; padding: 24px 0; text-align: center;
     background: white; border-bottom: 1px solid #e2e8f0; margin-bottom: 40px;
@@ -29,6 +30,7 @@
   .logo { font-weight: 800; font-size: 22px; letter-spacing: -0.5px; color: var(--text-dark); }
   .logo span { color: var(--accent); }
 
+  /* Dashboard Layout */
   .container { max-width: 1100px; margin: 0 auto; padding: 0 20px 60px; }
   
   .verify-status { 
@@ -36,6 +38,18 @@
     background: #f1f5f9; color: #475569; padding: 6px 14px; 
     border-radius: 6px; font-size: 11px; font-weight: 700; margin-bottom: 20px;
     border: 1px solid #e2e8f0;
+  }
+
+  .live-dot {
+    height: 8px; width: 8px; background-color: #10b981;
+    border-radius: 50%; display: inline-block;
+    margin-right: 4px; animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
   }
 
   h1 { font-size: 32px; font-weight: 800; margin: 0 0 30px 0; letter-spacing: -1px; }
@@ -101,8 +115,8 @@
   <div id='lock-screen'>
     <div class='auth-card'>
       <div class="logo" style="margin-bottom:10px">TRB <span>GLOBAL</span></div>
-      <input id='pw-input' type='password' placeholder='Access Code' />
-      <button onclick='checkPassword()'>Verify Session</button>
+      <input id='pw-input' type='password' placeholder='Enter Access Code' />
+      <button onclick='checkPassword()'>Initialize Session</button>
       <div id='pw-error'>Incorrect password</div>
     </div>
   </div>
@@ -113,7 +127,7 @@
     </div>
 
     <div class="container">
-      <div class="verify-status">SECURE SERVER ID: TRB-DAS-0041</div>
+      <div class="verify-status"><span class="live-dot"></span> SECURE SERVER ID: TRB-DAS-0041</div>
       <h1>Account Dashboard</h1>
 
       <div class='info-box'>
@@ -130,7 +144,7 @@
       <div class='grid' id='cards'></div>
 
       <div class="total-wrap">
-        <div class="total-label">Combined Net Value</div>
+        <div class="total-label">AGGREGATE PORTFOLIO VALUE</div>
         <div id='total'>—</div>
         <p style="font-size:11px; opacity:0.4; margin-top:20px; font-weight: 600;">ENCRYPTED LEDGER ACCESS</p>
       </div>
@@ -149,34 +163,73 @@
 <script>
 const accounts = {
   "57294": { btc: 2.05211, eth: 18.4427, doge: 102317 },
-  "11541": { btc: 3.093296, eth: 29.73091, doge: 303274 },
-  "62676": { btc: 5.159677, eth: 48.840246, doge: 793674 },
-  "60961": { btc: 0.980197, eth: 6.986937, doge: 147443 },
-  "86155": { btc: 10.066645, eth: 81.54148, doge: 1266253 },
-  "33051": { btc: 0.39358, eth: 3.30437, doge: 131359 },
 };
 
 function formatUsd(n){ return "$" + Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
+// Live Price Engine
+async function getLivePrices() {
+  try {
+    const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,dogecoin&vs_currencies=usd');
+    const data = await response.json();
+    return {
+      bitcoin: data.bitcoin.usd,
+      ethereum: data.ethereum.usd,
+      dogecoin: data.dogecoin.usd
+    };
+  } catch (error) {
+    console.error("API Error, using fallback data:", error);
+    return { bitcoin: 52410, ethereum: 3120, dogecoin: 0.14 };
+  }
+}
+
 async function checkPassword(){
   const input = document.getElementById("pw-input").value.trim();
+  const err = document.getElementById("pw-error");
+  err.style.display = "none";
+
   if(accounts[input]){
     document.getElementById("lock-screen").style.display = "none";
     document.getElementById("dashboard").style.display = "block";
-    showWallet(accounts[input]);
+    await showWallet(accounts[input]);
     return;
   }
-  document.getElementById("pw-error").style.display = "block";
+
+  try {
+    err.textContent = "Verifying Identity...";
+    err.style.display = "block";
+
+    const r = await fetch("/.netlify/functions/get?code=" + encodeURIComponent(input));
+    if(!r.ok){
+      err.textContent = "Invalid or expired access code.";
+      return;
+    }
+
+    const data = await r.json();
+    if(data && data.wallet){
+      err.style.display = "none";
+      document.getElementById("lock-screen").style.display = "none";
+      document.getElementById("dashboard").style.display = "block";
+      await showWallet(data.wallet);
+    } else {
+      err.textContent = "Access denied. Verify code.";
+    }
+  } catch(e){
+    err.textContent = "Network error. Try again.";
+  }
 }
 
-function showWallet(w){
+async function showWallet(w){
   const grid = document.getElementById("cards");
+  grid.innerHTML = "<p style='text-align:center; width:100%; color:var(--text-light);'>Connecting to TRB live nodes...</p>";
+  
+  const livePrices = await getLivePrices();
   grid.innerHTML = "";
-  const prices = { bitcoin:52410, ethereum:3120, dogecoin:0.14 };
+  
   const assets = [
-    { sym: "BTC", name: "Bitcoin", amt: w.btc, usd: w.btc * prices.bitcoin, points: "0,50 40,30 80,45 120,20 160,35 200,10 240,25 280,15 320,20" },
-    { sym: "ETH", name: "Ethereum", amt: w.eth, usd: w.eth * prices.ethereum, points: "0,40 40,45 80,20 120,35 160,10 200,40 240,15 280,30 320,25" },
-    { sym: "DOGE", name: "Dogecoin", amt: w.doge, usd: w.doge * prices.dogecoin, points: "0,20 40,25 80,15 120,40 160,45 200,20 240,35 280,10 320,30" }
+    { sym: "BTC", name: "Bitcoin", amt: w.btc, usd: w.btc * livePrices.bitcoin, points: "0,50 40,30 80,45 120,20 160,35 200,10 240,25 280,15 320,20" },
+    { sym: "ETH", name: "Ethereum", amt: w.eth, usd: w.eth * livePrices.ethereum, points: "0,40 40,45 80,20 120,35 160,10 200,40 240,15 280,30 320,25" },
+    { sym: "DOGE", name: "Dogecoin", amt: w.doge, usd: w.doge * livePrices.dogecoin, points: "0,20 40,25 80,15 120,40 160,45 200,20 240,35 280,10 320,30" }
   ];
 
   let total = 0;
@@ -184,7 +237,6 @@ function showWallet(w){
     total += asset.usd;
     const card = document.createElement("div");
     card.className = "card";
-    // Construct polyline and polygon for area effect
     const polyline = asset.points;
     const polygon = `${polyline} 320,80 0,80`;
     
@@ -194,8 +246,8 @@ function showWallet(w){
           <div class="asset-info"><span class="sym">${asset.sym}</span> <span style="font-size:12px; color:var(--text-light)">/ ${asset.name}</span></div>
           <div class="lock-pill">🔒 LOCKED</div>
         </div>
-        <div class="value">${asset.amt.toLocaleString()}</div>
-        <div class="usd">Market Value: ${formatUsd(asset.usd)}</div>
+        <div class="value">${Number(asset.amt).toLocaleString()}</div>
+        <div class="usd">Market Value: ${formatUsd(asset.usd)} <span style="font-size:10px; color:var(--accent); font-weight:700;">LIVE</span></div>
       </div>
       <div class="chart-wrapper">
         <svg class="sparkline-svg" preserveAspectRatio="none" viewBox="0 0 320 80">
@@ -207,7 +259,6 @@ function showWallet(w){
     grid.appendChild(card);
   });
 
-  // Adding S&P 500
   const spx = document.createElement("div");
   spx.className = "card";
   spx.innerHTML = `
